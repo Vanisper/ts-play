@@ -1,0 +1,21 @@
+# https://biomejs.dev/zh-cn/recipes/git-hooks/#lefthook
+# https://juejin.cn/post/7062962192487809055
+
+# ------ reset git-hook (replace .husky)
+# git config --unset core.hooksPath
+# rm .git/hooks/pre-commit
+# rm .git/hooks/pre-push
+# ------
+
+# Use this to validate commit messages
+commit-msg:
+  commands:
+    lint-commit-message:
+      run: npx commitlint --edit {1}
+
+pre-commit:
+  parallel: true
+  commands:
+    frontend-linter:
+      glob: '*.{js,jsx,ts,tsx,vue,md}'
+      run: npx eslint {staged_files}
