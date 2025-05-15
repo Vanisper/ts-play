@@ -1,5 +1,5 @@
 {
-  "name": "nodejs-template",
+  "name": "ts-play",
   "type": "module",
   "version": "0.0.0",
   "sideEffects": false,
