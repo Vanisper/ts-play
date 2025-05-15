@@ -13,5 +13,5 @@
 
   "yaml.schemas": {
     ".vscode/schema/commitlint-with-cz.json": ".commitlintrc.yaml"
-  },
+  }
 }
