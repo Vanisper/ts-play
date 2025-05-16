@@ -17,6 +17,6 @@
 
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.patterns": {
-    "*.ts": "*.test.ts"
+    "*.ts": "*.test.ts, *.d.ts"
   }
 }

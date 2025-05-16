@@ -13,6 +13,16 @@ type Mutable<T> = Pretty<{
   -readonly [K in keyof T]: T[K];
 }>
 
+type Arrayable<T> = T | T[]
+
+/**
+ * JSON 类型
+ * @link https://stackoverflow.com/questions/61148466/typescript-type-that-matches-any-object-but-not-arrays
+ */
+interface IJson {
+  [key: string]: Arrayable<string | number | boolean | IJson>
+}
+
 type SetOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
 
 /**
@@ -42,20 +52,23 @@ type IndexKeys<T> = string extends keyof T ? string : number extends keyof T ? n
 
 /**
  * 获取对象类型 T 中所有必需属性的键名组成的联合类型。
- * 例如：GetRequiredKeys<{ a: string; b?: number }> 会得到 "a"
+ *
+ * @example GetRequiredKeys<{ a: string; b?: number }> 会得到 "a"
  */
 type GetRequiredKeys<TargetObject extends object> = RequiredLiteralKeys<TargetObject>
 
 /**
  * 获取对象类型 T 中所有可选属性的键名组成的联合类型。
- * 例如：GetOptionalKeys<{ a: string; b?: number }> 会得到 "b"
+ *
+ * @example GetOptionalKeys<{ a: string; b?: number }> 会得到 "b"
  */
 type GetOptionalKeys<TargetObject extends object> = OptionalLiteralKeys<TargetObject>
 
 /**
- * (辅助工具) 将联合类型转换为交叉类型。
- * 例如：UnionToIntersection<'a' | 'b'> 会得到 'a' & 'b' (对于字符串字面量是 never)
- * 例如：UnionToIntersection<'a'> 会得到 'a'
+ * 将联合类型转换为交叉类型。
+ *
+ * @example UnionToIntersection<'a' | 'b'> 会得到 'a' & 'b' (对于字符串字面量是 never)
+ * @example UnionToIntersection<'a'> 会得到 'a'
  */
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
   k: infer I
@@ -64,11 +77,12 @@ type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
   : never
 
 /**
- * (辅助工具) 判断一个字符串类型 TestString 是否为单一的、特定的字符串字面量。
- * 例如：IsActuallySingleStringLiteral<"name"> 为 true
- * 例如：IsActuallySingleStringLiteral<"name" | "age"> 为 false
- * 例如：IsActuallySingleStringLiteral<string> 为 false
- * 例如：IsActuallySingleStringLiteral<never> 为 false
+ * 判断一个字符串类型 TestString 是否为单一的、特定的字符串字面量。
+ *
+ * @example IsActuallySingleStringLiteral<"name"> 为 true
+ * @example IsActuallySingleStringLiteral<"name" | "age"> 为 false
+ * @example IsActuallySingleStringLiteral<string> 为 false
+ * @example IsActuallySingleStringLiteral<never> 为 false
  */
 type IsActuallySingleStringLiteral<TestString extends string> =
       string extends TestString // 排除宽泛的 string 类型

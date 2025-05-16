@@ -37,47 +37,64 @@ function createChainable<T extends object>(initialObj: T): CreateObj<T> {
   return new Proxy(targetObject, handler) as CreateObj<T>
 }
 
+/**
+ * 重载 1: 接受完整对象 T 的调用。
+ * 这是最通用的形式
+ */
+function createObj<T extends object>(
+  value: T
+): CreateObj<T>
+
+/**
+ * 重载 2: 单一必需属性值 (VT) + 其特定的属性键名 (K) 调用。
+ * 仅当 T 只有一个必需属性时匹配。
+ * value 是该属性的值，key 是该属性的名称。
+ */
 function createObj<
   T extends object,
   Meta = SingleRequiredPropMeta<T>,
 >(
-  value: Meta extends { name: keyof T, type: infer VT } ? VT : T,
-  options?: GetRequiredKeys<T>,
+  value: Meta extends { type: infer VT } ? VT : never,
+  key: Meta extends { name: infer K extends keyof T } ? K : never,
 ): CreateObj<T>
-function createObj<T extends object>(value: T): CreateObj<T>
+
+/**
+ * 重载 3: 无参数调用。
+ * 仅当 T 的所有属性都为可选时匹配。T 必须由调用者显式提供。
+ */
 function createObj<T extends object>(
   ...args: AreAllPropertiesOptional<T> extends true ? [] : [never]
-): AreAllPropertiesOptional<T> extends true ? CreateObj<T> : never
+): CreateObj<T>
 
-function createObj<T extends object>(...args: any[]): CreateObj<T> { // 实现的返回类型应该是 CreateObj<T> 或在错误路径抛出
+function createObj<T extends object>(...args: any[]): CreateObj<T> {
   const argsLength = args.length
 
-  // --- 处理无参数调用重载 (当 T 的所有属性可选时) ---
+  // 对应重载 3: 无参数调用
   if (argsLength === 0) {
-    // 编译时，类型系统应已通过 AreAllPropertiesOptional<T> 确保 T 适合无参数调用。
-    // 运行时，信任这个编译时检查。
+    // 编译时已确保 T 的所有属性可选
     return createChainable({} as T)
   }
 
-  // --- 处理带参数的调用 ---
-  // 假设参数最多为两个：第一个是 value (可能是 VT 或 T)，第二个是 options
   const firstArg = args[0]
-  const options = (argsLength > 1 ? args[1] : undefined) as keyof T | undefined
+  const secondArg = args[1]
 
-  if (options && typeof options === 'string') {
-    // 如果 options 存在(即Meta找到了K)，则使用它；否则(Meta没找到K，没有options)，使用默认 "__key__"
-    const keyToUse = options ?? '__key__' // 当然，当前不会出现这个问题（没有传递会直接报错），但还是保留了兜底逻辑
-    const forcedObj = { [keyToUse]: firstArg } as T
-    return createChainable(forcedObj)
+  // 对应重载 2: 单一必需属性值 (VT) + 其特定的属性键名 (K)
+  if (argsLength === 2 && typeof secondArg === 'string') {
+    const constructedObj = { [secondArg]: firstArg } as T
+    return createChainable(constructedObj)
   }
 
-  if (typeof firstArg === 'object' && firstArg !== null) {
+  // 对应重载 1: 接受完整对象 T (此时 argsLength === 1)
+  if (argsLength === 1 && typeof firstArg === 'object' && firstArg !== null) {
     return createChainable({ ...firstArg } as T) // 使用对象副本
   }
 
+  // 如果以上情况都不匹配（例如，argsLength === 1 但 firstArg 不是对象，
+  // 这意味着尝试了单属性值模式但没有提供 key），则视为无效用法。
+  // 这种情况在编译时应已被类型系统捕获（因为不匹配任何有效重载）。
   throw new Error(
-    'Invalid createObj usage: A unknown argument was provided without `options: string` (keyof T), '
-    + 'or the call signature did not match any productive overload.',
+    'Invalid createObj usage: Arguments did not match any valid signature. '
+    + 'If providing a single non-object value for a required property, its key must be provided as the second argument.',
   )
 }
 

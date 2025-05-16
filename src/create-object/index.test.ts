@@ -1,14 +1,8 @@
 /* eslint-disable no-console */
-// ❗ 所有的整项传值在运行时都是不安全的 - 但是开发阶段的类型推断是正确的 ❗
-// ---
-// ❗ 单参传构造时，做了运行时的校验，如果传入构造方法的首位参数是非对象类型，则需要指定 key 值，否则会报错 ❗
-// ❗ 但是这个情况下，如果唯一的必选属性是对象类型，则会与整项传参的重载有概念上的混淆，此时必须指定第二个参数 key，否则将会当作整项传值，是存在运行时不安全的问题的 ❗
-// ❗ 需要加强开发时类型推断 - 检测到单必选参数时，优先单参传值模式，要保证首位参数的类型推导优先，且此时 key 值在类型推导上为必传 ❗
-// ❗ 例如单参是字符串枚举的话，推导出缺少两个参数传递的同时，首位参数的类型枚举要推导出，第二个参数推导出必选参数的 key 枚举 ❗
-// ❗ 单参如果是对象的话，和整项传参重载有概念上的混淆，优先重载到整项传参，如果需要指定是单参传值模式，可以再手动传入一个泛型参数，这个参数自动推导成必选参数的 key 值枚举，后面的调用重载自动切换到单参传值模式 ❗
-// ❗ 加强开发时类型推断 ❗
-// ---
 import createObj from '.'
+
+// https://juejin.cn/post/7057471253279408135
+interface IUser { name: string, key: number, label: string }
 
 // --------- 无泛型使用 ---------
 const user = createObj({ name: 'Alice', age: 30 })
@@ -17,8 +11,8 @@ const user = createObj({ name: 'Alice', age: 30 })
 console.log(user) // { name: 'Bob', age: 25 }
 
 // --------- 有泛型 - 多必选 ---------
-interface User { name?: string, key: number, label: string }
-// const forcedUser = createObj<User>({ key: 1 }).setName('Bob') // 开发时类型推断错误，因为缺少必选参数 label - 但是无法保证运行时一定有 label 值
+type User = SetOptional<IUser, 'name'>
+// const forcedUser = createObj<User>({ key: 1 }).setName('Bob') // 开发时类型推断错误，因为缺少必选参数 label - 但是运行时还是无法保证
 const forcedUser = createObj<User>({ key: 1, label: 'test' }).setName('Bob')
 console.log(forcedUser) // { name: 'Bob', key: 1, label: 'test' }
 
