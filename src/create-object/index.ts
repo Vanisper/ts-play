@@ -55,17 +55,18 @@ function createObj<T extends object>(...args: any[]): CreateObj<T> { // 实现�
   // --- 处理无参数调用重载 (当 T 的所有属性可选时) ---
   if (argsLength === 0) {
     // 编译时，类型系统应已通过 AreAllPropertiesOptional<T> 确保 T 适合无参数调用。
-    // 运行时，我们信任这个编译时检查。
+    // 运行时，信任这个编译时检查。
     return createChainable({} as T)
   }
 
   // --- 处理带参数的调用 ---
-  // 我们假设参数最多为两个：第一个是 value (可能是 VT 或 T)，第二个是 options
+  // 假设参数最多为两个：第一个是 value (可能是 VT 或 T)，第二个是 options
   const firstArg = args[0]
-  const options = (argsLength > 1 ? args[1] : undefined) as keyof T | undefined // 在运行时用 any 替代 Meta
+  const options = (argsLength > 1 ? args[1] : undefined) as keyof T | undefined
 
   if (options && typeof options === 'string') {
-    const keyToUse = options ?? '__key__' // 如果 options.forceKey 存在(即Meta找到了K)，则使用它；否则(Meta没找到K，options里就没有forceKey)，使用默认 "__key__"
+    // 如果 options 存在(即Meta找到了K)，则使用它；否则(Meta没找到K，没有options)，使用默认 "__key__"
+    const keyToUse = options ?? '__key__' // 当然，当前不会出现这个问题（没有传递会直接报错），但还是保留了兜底逻辑
     const forcedObj = { [keyToUse]: firstArg } as T
     return createChainable(forcedObj)
   }
