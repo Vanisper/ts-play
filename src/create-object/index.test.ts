@@ -22,3 +22,13 @@ console.log(newUser1) // { name: 'Name1', key: 1, label: 'Label1' }
 // console.log(newUser2) // { name: 'test', key: 1 }
 const newUser3 = createObj<NewUser>(3, 'key').setName('Name3').setLabel('Label3') // 单参数使用 - 需要指定 key 值，这是因为运行时是不知道值给那个 key 的
 console.log(newUser3) // { name: 'Name3', key: 3, label: 'Label3' }
+
+// --------- 有泛型 - 无必选 ---------
+const newUser4 = createObj<Partial<User>>({ key: 4 }).setName('Name4').setLabel('Label4') // 正常使用
+console.log(newUser4) // { name: 'Name4', key: 4, label: 'Label4' }
+
+const newUser5 = createObj<Partial<User>>({}).setKey(5).setName('Name5').setLabel('Label5') // 正常使用
+console.log(newUser5) // { name: 'Name5', key: 5, label: 'Label5' }
+
+const newUser6 = createObj<Partial<User>>().setKey(6).setName('Name6').setLabel('Label6') // 正常使用
+console.log(newUser6) // { name: 'Name6', key: 6, label: 'Label6' }
