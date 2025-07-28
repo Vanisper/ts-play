@@ -8,6 +8,7 @@
     "pnpm": ">=10.0"
   },
   "scripts": {
+    "test": "vitest",
     "preinstall": "npx only-allow pnpm",
     "prepare": "npx lefthook install",
     "commit": "git-cz",
@@ -22,7 +23,8 @@
     "cz-git": "^1.11.1",
     "eslint": "^9.25.1",
     "lefthook": "^1.11.11",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   },
   "config": {
     "commitizen": {
