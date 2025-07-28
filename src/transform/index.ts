@@ -12,7 +12,7 @@ type Transformed<S, M extends TransformMap<S>> =
       ? { [K in keyof S as K extends keyof M ? M[K] extends string ? M[K] : K : K]: S[K] }
       : never
 
-function transform<S, M extends TransformMap<S>>(
+export function transform<S, M extends TransformMap<S>>(
   source: S,
   mapping?: M,
 ) {
@@ -41,5 +41,4 @@ function transformObject<T>(obj: T, mapping?: Partial<Record<keyof T, string>>) 
   return result
 }
 
-export { transform }
 export default transform

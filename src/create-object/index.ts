@@ -1,56 +1,71 @@
+/**
+ * 为对象 T 创建一个链式调用的类型。
+ * 它结合了 T 的所有自身属性（可以直接访问）
+ * 以及为每个属性生成的 `set` 方法，例如 `setName(value)`.
+ */
 type CreateObj<T extends object> = Required<{
   [K in keyof T as `set${Capitalize<string & K>}`]: (value: T[K]) => CreateObj<T>;
 }> & T
 
+/**
+ * 内部函数，使用 Proxy 实现链式调用。
+ * @param initialObj - 初始状态的对象。
+ * @returns 一个被 Proxy 包装的对象，支持链式调用。
+ */
 function createChainable<T extends object>(initialObj: T): CreateObj<T> {
-  // 确保我们操作的是一个对象，并且是 initialObj 的副本
-  const targetObject = (typeof initialObj === 'object' && initialObj !== null)
-    ? { ...initialObj }
-    : {} as T
+  // 创建一个 initialObj 的浅拷贝，避免修改原始输入对象
+  const targetObject = { ...initialObj }
 
   const handler: ProxyHandler<T> = {
-    get: (target, propKey: string | symbol, receiver) => {
+    get(target, propKey, receiver) {
       const propName = String(propKey)
 
-      // 动态处理 setXyz 调用
+      // 动态拦截形如 `setXyz` 的方法调用。
+      // 这是实现链式 setter 的核心。
       if (propName.startsWith('set') && propName.length > 3) {
+        // 通过首字母大小写判断是否为我们期望的 set 调用，而非普通属性（如 "settings"）
         const firstCharAfterSet = propName.charAt(3)
-        // 确保是 setK (首字母大写) 而非普通属性如 "settings"
         if (firstCharAfterSet === firstCharAfterSet.toUpperCase()) {
+          // 将 `setName` 转换为 `name`
           const keyToSet = firstCharAfterSet.toLowerCase() + propName.slice(4)
-          return (paramValue: any) => {
-            (target as any)[keyToSet] = paramValue
-            return receiver // 返回代理自身以支持链式调用
+
+          // 返回一个函数，该函数修改目标对象的属性
+          return (value: any) => {
+            (target as any)[keyToSet] = value
+            // 关键：返回 Proxy 自身 (receiver)，以实现链式调用。
+            // obj.setName('A').setAge(10)
+            return receiver
           }
         }
       }
-      // 其他属性正常获取
+
+      // 对于非 set* 调用（例如直接访问 `obj.name`），正常返回目标对象的属性值。
       return Reflect.get(target, propKey, receiver)
     },
-    set: (target, propKey: string | symbol, value, receiver) => {
-      // 允许直接设置属性，符合 CreateObj<T> 定义中的 `& T` 部分
+    // 我们也允许直接赋值 `obj.name = 'new name'`
+    set(target, propKey, value, receiver) {
       return Reflect.set(target, propKey, value, receiver)
     },
-    // 可以按需添加其他 Proxy 陷阱如 has, ownKeys 等
   }
 
   return new Proxy(targetObject, handler) as CreateObj<T>
 }
 
 /**
- * 重载 1: 接受完整对象 T 的调用。
- * 这是最通用的形式
+ * 重载 1: 接受一个完整的对象作为初始值。
+ * @example createObj({ name: 'Alice', age: 30 })
  */
-function createObj<T extends object>(
+export function createObj<T extends object>(
   value: T
 ): CreateObj<T>
 
 /**
- * 重载 2: 单一必需属性值 (VT) + 其特定的属性键名 (K) 调用。
- * 仅当 T 只有一个必需属性时匹配。
- * value 是该属性的值，key 是该属性的名称。
+ * 重载 2: 当泛型 T 只有一个必需属性时，可只传入该属性的值和键名。
+ * @example
+ * interface User { name: string; age?: number; }
+ * createObj<User>('Bob', 'name')
  */
-function createObj<
+export function createObj<
   T extends object,
   Meta = SingleRequiredPropMeta<T>,
 >(
@@ -59,44 +74,48 @@ function createObj<
 ): CreateObj<T>
 
 /**
- * 重载 3: 无参数调用。
- * 仅当 T 的所有属性都为可选时匹配。T 必须由调用者显式提供。
+ * 重载 3: 当泛型 T 的所有属性都可选时，允许无参数调用。
+ * @example
+ * interface Config { host?: string; port?: number; }
+ * createObj<Config>()
  */
-function createObj<T extends object>(
+export function createObj<T extends object>(
   ...args: AreAllPropertiesOptional<T> extends true ? [] : [never]
 ): CreateObj<T>
 
-function createObj<T extends object>(...args: any[]): CreateObj<T> {
+/**
+ * createObj 函数的实现。
+ * 它根据传入参数的数量和类型，分派到不同的创建逻辑，
+ * 最终都调用 `createChainable` 来返回一个支持链式调用的对象。
+ */
+export function createObj<T extends object>(...args: any[]): CreateObj<T> {
   const argsLength = args.length
 
-  // 对应重载 3: 无参数调用
+  // 匹配重载 3: 无参数调用 (e.g., createObj<Config>())
   if (argsLength === 0) {
-    // 编译时已确保 T 的所有属性可选
+    // 此时 TypeScript 已在编译时确保 T 的所有属性是可选的
     return createChainable({} as T)
   }
 
   const firstArg = args[0]
   const secondArg = args[1]
 
-  // 对应重载 2: 单一必需属性值 (VT) + 其特定的属性键名 (K)
+  // 匹配重载 2: 单一值 + 键名 (e.g., createObj<User>('Bob', 'name'))
   if (argsLength === 2 && typeof secondArg === 'string') {
     const constructedObj = { [secondArg]: firstArg } as T
     return createChainable(constructedObj)
   }
 
-  // 对应重载 1: 接受完整对象 T (此时 argsLength === 1)
+  // 匹配重载 1: 完整对象 (e.g., createObj({ name: 'Alice' }))
   if (argsLength === 1 && typeof firstArg === 'object' && firstArg !== null) {
-    return createChainable({ ...firstArg } as T) // 使用对象副本
+    return createChainable(firstArg as T)
   }
 
-  // 如果以上情况都不匹配（例如，argsLength === 1 但 firstArg 不是对象，
-  // 这意味着尝试了单属性值模式但没有提供 key），则视为无效用法。
-  // 这种情况在编译时应已被类型系统捕获（因为不匹配任何有效重载）。
+  // 如果参数不匹配任何重载（这在正常 TS 环境下会被编译器阻止），
+  // 则在运行时抛出错误，以防 ts-ignore 或纯 JS 调用。
   throw new Error(
-    'Invalid createObj usage: Arguments did not match any valid signature. '
-    + 'If providing a single non-object value for a required property, its key must be provided as the second argument.',
+    'Invalid createObj usage: Arguments did not match any valid signature.',
   )
 }
 
-export { createObj }
 export default createObj
